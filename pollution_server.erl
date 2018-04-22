@@ -9,13 +9,12 @@
 
 
 start() ->
-    register (pollutionServer, spawn(pollution_server, init, [])).
+    register (pollutionServer, spawn(pollution_server, init, [])),
+    'server started'.
 
 init() ->
     loop(pollution:createMonitor()).
 
-stop() ->
-    pollutionServer ! {self(), terminate}.
 
 
 %%% CLIENT
@@ -44,6 +43,10 @@ getDailyMean({Year,Month,Day}, Type) ->
     call(getDailyMean, {{Year,Month,Day},Type}).
 
 getMonitor() -> call(getMonitor, []).
+
+stop() ->
+    call(stop,[]).
+
 
 
 
@@ -97,8 +100,8 @@ loop(Monitor) ->
                 Pid ! {reply, Result},
                 loop(Monitor);
 
-        {Pid, treminate} ->
-            Pid ! {reply, terminated}
+        {stop, Pid, _} ->
+            Pid ! {reply, 'server terminated'}
     end.
 
 
