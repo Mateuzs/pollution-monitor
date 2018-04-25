@@ -4,7 +4,7 @@
 
 %%% API %%%
 -export([createMonitor/0, addStation/3, addValue/5, removeValue/4,
-         getOneValue/4, getDailyMean/3, getStationMean/3]).
+         getOneValue/4, getDailyMean/3, getStationMean/3, getDeviation/3]).
 
 %%% RECORDS %%%
 
@@ -49,7 +49,7 @@ addValue(Name, {{Year, Month, Day},{Hour,Minutes,Seconds}}, Type, Value, Monitor
     Result = #value{value = Value},
 
     case maps:is_key(Measurement,Monitor) of
-      true -> {"These value already Exists!", Monitor};
+      true -> {"error: This value already Exists!", Monitor};
       false -> {ok, Monitor#{Measurement => Result}}
     end.
        
@@ -66,7 +66,7 @@ removeValue(Name, {{Year, Month, Day},{Hour,Minutes,Seconds}}, Type, Monitor) ->
 
 getOneValue({PosX,PosY}, {{Year, Month, Day},{Hour,Minutes,Seconds}}, Type, Monitor) ->
     Key = createMeasurement({PosX,PosY}, {{Year, Month, Day},{Hour,Minutes,Seconds}}, Type),
-      maps:get(Key,Monitor);
+      maps:get(Key,Monitor, "there isn't such measurement!");
 
 
 getOneValue(Name, {{Year, Month, Day},{Hour,Minutes,Seconds}}, Type, Monitor) ->
@@ -114,6 +114,33 @@ getDailyMean({Year, Month, Day}, Type, Monitor) ->
     {Sum,Count} -> Sum / Count
   end.
 
+getDeviation({{Year, Month, Day},{Hour,Minutes,Seconds}}, Type, Monitor) ->
+    Filter = fun (Measurement, Value, {Sum,Count}) when
+    Measurement#measurement.date#date.year == Year andalso
+    Measurement#measurement.date#date.month == Month andalso
+    Measurement#measurement.date#date.day == Day andalso
+    Measurement#measurement.date#date.hour == Hour andalso
+    Measurement#measurement.type == Type 
+                         -> {Sum + Value#value.value, Count +1};
+     (_, _, {Sum,Count}) -> {Sum,Count} end,
+
+     case maps:fold(Filter, {0,0}, Monitor) of
+        {0,0} -> "There is no measurements!";
+        {Sum,Count} -> 
+
+            Mean = Sum/Count,
+            Filter2 = fun (Measurement, Value, {Sum,Count}) when
+            Measurement#measurement.date#date.year == Year andalso
+            Measurement#measurement.date#date.month == Month andalso
+            Measurement#measurement.date#date.day == Day andalso
+            Measurement#measurement.date#date.hour == Hour andalso
+            Measurement#measurement.type == Type 
+                                 -> {Sum + math:pow((Value#value.value - Mean),2), Count +1};
+             (_, _, {Sum,Count}) -> {Sum,Count} end,
+             
+            {Sum2,Count2} =  maps:fold(Filter2, {0,0}, Monitor),
+            math:sqrt(Sum2/Count2)
+        end.
 
 
 %%% FILTER FUNCTIONS %%%

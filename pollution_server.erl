@@ -3,7 +3,7 @@
 -author("mateuszzembol").
 
 %%API
--export([start/0, stop/0, addStation/2, addValue/4, getMonitor/0,
+-export([start/0, stop/0, addStation/2, addValue/4, getMonitor/0, getDeviation/2,
          removeValue/3, getOneValue/3, getDailyMean/2, getStationMean/2]).
 -export([init/0]).
 
@@ -31,7 +31,7 @@ addValue(Station,{{Year, Month, Day},{Hour,Minutes,Seconds}}, Type, Value)->
     call(addValue, {Station,{{Year, Month, Day},{Hour,Minutes,Seconds}}, Type, Value}).
 
 removeValue(Station,{{Year, Month, Day},{Hour,Minutes,Seconds}}, Type) ->
-    call(removeVaule, {Station,{{Year, Month, Day},{Hour,Minutes,Seconds}}, Type}).
+    call(removeValue, {Station,{{Year, Month, Day},{Hour,Minutes,Seconds}}, Type}).
 
 getOneValue(Station,{{Year, Month, Day},{Hour,Minutes,Seconds}}, Type) ->
     call(getOneValue, {Station,{{Year, Month, Day},{Hour,Minutes,Seconds}}, Type}).
@@ -41,6 +41,9 @@ getStationMean(Station, Type) ->
 
 getDailyMean({Year,Month,Day}, Type) ->
     call(getDailyMean, {{Year,Month,Day},Type}).
+
+getDeviation({{Year,Month,Day},{Hour,Minutes,Seconds}}, Type) ->
+    call(getDeviation, {{{Year,Month,Day},{Hour,Minutes,Seconds}}, Type}).
 
 getMonitor() -> call(getMonitor, []).
 
@@ -98,6 +101,11 @@ loop(Monitor) ->
             Result  =
                 pollution:getDailyMean({Year, Month, Day}, Type, Monitor),
                 Pid ! {reply, Result},
+                loop(Monitor);
+        
+        {getDeviation, Pid, {{{Year, Month, Day},{Hour,Minutes,Seconds}}, Type}} ->
+               Result = pollution:getDeviation({{Year, Month, Day},{Hour,Minutes,Seconds}}, Type, Monitor),
+                Pid ! {reply,Result},
                 loop(Monitor);
 
         {stop, Pid, _} ->
