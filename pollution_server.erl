@@ -3,13 +3,13 @@
 -author("mateuszzembol").
 
 %%API
--export([start/0, stop/0, addStation/2, addValue/4, getMonitor/0, getDeviation/2,
+-export([start/0, stop/0, crash/0, addStation/2, addValue/4, getMonitor/0, getDeviation/2,
          removeValue/3, getOneValue/3, getDailyMean/2, getStationMean/2]).
 -export([init/0]).
 
 
 start() ->
-    register (pollutionServer, spawn(pollution_server, init, [])),
+    register (pollutionServer, spawn_link(pollution_server, init, [])),
     'server started'.
 
 init() ->
@@ -46,6 +46,8 @@ getDeviation({{Year,Month,Day},{Hour,Minutes,Seconds}}, Type) ->
     call(getDeviation, {{{Year,Month,Day},{Hour,Minutes,Seconds}}, Type}).
 
 getMonitor() -> call(getMonitor, []).
+
+crash() -> call(crash, []).
 
 stop() ->
     call(stop,[]).
@@ -107,6 +109,10 @@ loop(Monitor) ->
                Result = pollution:getDeviation({{Year, Month, Day},{Hour,Minutes,Seconds}}, Type, Monitor),
                 Pid ! {reply,Result},
                 loop(Monitor);
+        
+        {crash, Pid, _} ->
+                Pid  ! {reply, 'let`s crash!'},
+                1/0;
 
         {stop, Pid, _} ->
             Pid ! {reply, 'server terminated'}
